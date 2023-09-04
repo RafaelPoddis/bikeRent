@@ -1,44 +1,23 @@
-import {Bicicleta} from "./bicicleta"
-import {Cliente} from "./cliente"
-import {Funcionario} from "./funcionario"
+import { App } from "./app";
+import { Bike } from "./bike";
+import { Rent } from "./rent";
+import { User } from "./user";
 
-class Pedido {
-    idPedido:Number
-    Cliente: Cliente
-    Funcionario: Funcionario
-    Bicicleta: Bicicleta
-    Valor: number = 0.0
-    Tempo: number
-    DataPedido: string
-    DataDevolucao: string
+const bike = new Bike('mountain bike', 'mountain', 123, 500, 100.5, 'desc', 5, [], '1235')
+const user = new User('Maria', 'maria@mail.com', '1234')
+const today = new Date()
+const twoDaysFromToday = new Date()
+twoDaysFromToday.setDate(twoDaysFromToday.getDate() + 2)
+const tomorrow = new Date()
+tomorrow.setDate(tomorrow.getDate() + 1)
+const sevenDaysFromToday = new Date()
+sevenDaysFromToday.setDate(sevenDaysFromToday.getDate() + 7)
+const rent1 = Rent.create([], bike, user, today, twoDaysFromToday)
+const user2 = new User('Maria Clara', 'maria@mail.com', '3123')
+const bike1 = new Bike('mountain bike', 'mountain', 123, 500, 100.5, 'desc', 5, [], '1235')
 
-    //cria o objeto, inicializa os valores quando cria o atributo
-    constructor(idPedido: number, Cliente: Cliente, Funcionário: Funcionario, Bicicleta: Bicicleta, Tempo: number, DataPedido: string, DataDevolucao: string) {
-        this.idPedido = idPedido;
-        this.Cliente = Cliente;
-        this.Funcionario = Funcionário;
-        this.Bicicleta = Bicicleta;
-        this.Tempo = Tempo;
-        this.DataPedido = DataPedido;
-        this.DataDevolucao = DataDevolucao;
-    }
+const app = new App()
+app.registerUser(user)
+app.registerBike(bike)
 
-    //métodos (parametro) : retorno
-    aluguel (Tempo:number): void {
-        this.Valor = this.Valor + (Tempo* this.Bicicleta.valor);
-        this.Tempo+=Tempo
-    }
-    Alterardata(data:string) {
-        this.DataDevolucao = data;
-    }
-}
-/*
-const roberto = new Funcionario('Roberto Pereira', 1554)
-const geAl = new Funcionario('Geovana Alcantara', 1555)
-const rafael = new Cliente('Rafael Poddis', '111222333-44', '78996365471')
-const bike = new Bicicleta(1452, 740.50)
-const pedidoRafael = new Pedido(123, rafael, roberto, bike, 0, 202356, 202356)
-
-pedidoRafael.aluguel(60)
-console.log(pedidoRafael)
-*/
+console.log(app.registerBike(bike1))
