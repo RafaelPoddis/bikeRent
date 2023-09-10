@@ -57,4 +57,43 @@ export class App {
 			throw new Error('This bike is not rented by the user.');
 		}
     	}
+	
+	userListing(): void {
+		const bcrypt = require('bcrypt')
+		const saltRounds = 12
+		for (const lUser of this.users) {
+			const hash = bcrypt.hashSync(lUser.password, saltRounds)
+			lUser.password = hash
+			console.log(lUser)
+		}
+	}
+	
+	rentListing(): void {
+		for (const lRent of this.rents) {
+			console.log(lRent)
+		}
+	}
+	
+	bikeListing(): void {
+		for (const lBike of this.bikes) {
+			console.log(lBike)
+		}
+	}
+	/*
+	authenticateUser(id: string, password: string): void{
+		const bcrypt = require('bcrypt')
+		const userIndex = this.users.findIndex(user => user.id === id)
+		if(userIndex === -1){
+			const user = this.users[userIndex];
+			const correct = bcrypt.compareSync(password, user.password)
+			if(correct){
+				console.log('User successfully authenticated.')
+			}else{
+				throw new Error('Incorrect ID or password.')
+			}
+		}else{
+			throw new Error("User not registered.")
+		}
+	}
+ 	*/
 }  
