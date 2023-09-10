@@ -33,10 +33,11 @@ export class App {
 	}
 	removeUser(user: User): void {
 		const index = this.users.findIndex(rUser => rUser.id === user.id);
-		if(index === -1) {
+		if(index !== -1) {
+			this.users.splice(index, 1);
+		}else{
 			throw new Error('User not found.');
 		}
-		this.users.splice(index, 1);
 	}
 
 	rentBike(user: User, bike: Bike, startDate: Date, endDate: Date): Rent {
@@ -51,8 +52,9 @@ export class App {
 		const existingRentIndex = this.rents.findIndex(rent => rent.user.id === user.id && rent.bike.id === bike.id);
 
 		if(existingRentIndex === -1) {
+			this.rents.splice(existingRentIndex, 1);
+		}else{
 			throw new Error('This bike is not rented by the user.');
 		}
-		this.rents.splice(existingRentIndex, 1);
-    }
+    	}
 }  
