@@ -2,22 +2,24 @@ import { App } from "./app";
 import { Bike } from "./bike";
 import { Rent } from "./rent";
 import { User } from "./user";
+import sinon from 'sinon'
 
-const bike = new Bike('mountain bike', 'mountain', 123, 500, 100.5, 'desc', 5, [], '1235')
-const user = new User('Maria', 'maria@mail.com', '1234')
-const today = new Date()
-const twoDaysFromToday = new Date()
-twoDaysFromToday.setDate(twoDaysFromToday.getDate() + 2)
-const tomorrow = new Date()
-tomorrow.setDate(tomorrow.getDate() + 1)
-const sevenDaysFromToday = new Date()
-sevenDaysFromToday.setDate(sevenDaysFromToday.getDate() + 7)
-const rent1 = Rent.create([], bike, user, today, twoDaysFromToday)
-const user2 = new User('Maria Clara', 'maria@mail.com', '3123')
-const bike1 = new Bike('mountain bike', 'mountain', 123, 500, 100.5, 'desc', 5, [], '1235')
+async function main() {
+    const clock = sinon.useFakeTimers();
+    const app = new App()
+    const user1 = new User('Jose', 'jose@mail.com', '1234')
+    await app.registerUser(user1)
+    const bike = new Bike('caloi mountainbike', 'mountain bike',
+        1234, 1234, 100.0, 'My bike', 5, [], undefined)
+    app.registerBike(bike)
+	console.log(app.bikes)
+}
 
-const app = new App()
-app.registerUser(user)
-app.registerBike(bike)
+main()
 
-console.log(app.registerBike(bike1))
+
+
+
+
+
+
