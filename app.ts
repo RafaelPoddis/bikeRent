@@ -2,8 +2,11 @@ import { Bike } from "./bike";
 import { Crypt } from "./crypt";
 import { Rent } from "./rent";
 import { User } from "./user";
-import { faker } from '@faker-js/faker';
+import { createRequire } from "module";
 import crypto from 'crypto'
+
+const require = createRequire(import.meta.url);
+const faker = require("@faker-js/faker")
 
 export class App {
     users: User[] = []
