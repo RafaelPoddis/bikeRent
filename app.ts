@@ -1,87 +1,104 @@
 import { Bike } from "./bike";
+import { Crypt } from "./crypt";
 import { Rent } from "./rent";
 import { User } from "./user";
-import { Crypt } from "./crypt"
-import * as bcrypt from 'bcrypt';
+import { faker } from '@faker-js/faker';
+import crypto from 'crypto'
 
 export class App {
     users: User[] = []
     bikes: Bike[] = []
     rents: Rent[] = []
-	public crypt: Crypt
+    crypt: Crypt = new Crypt()
 
-    findUser(email: string): User {
-        return this.users.find(user => user.email === email);
+    findUser(email: string): User | undefined{
+        return this.users.find(user => user.email === email)
     }
 
-    async registerUser(user: User, password: string): Promise<string> {
+    async registerUser(user: User): Promise<string> {
         for (const rUser of this.users) {
             if (rUser.email === user.email) {
-                throw new Error('Duplicate user.');
+                throw new Error('Duplicate user.')
             }
         }
-
-        const hashedPassword = await crypt.encrypt(password);
-        user.password = hashedPassword;
-
-        const newId = crypto.randomUUID();
-        user.id = newId;
-        this.users.push(user);
-        return newId;
+        const newId = crypto.randomUUID()
+        user.id = newId
+        const encryptedPassword = await this.crypt.encrypt(user.password)
+        user.password = encryptedPassword
+        this.users.push(user)
+        return newId
     }
 
-    async authenticateUser(userId: string, password: string): Promise<boolean> {
-        const user = this.users.find((u) => u.id === userId);
-        if (!user) {
-            return false;
-        }
-
-        const passwordMatch = await bcrypt.compare(password, user.password);
-        return passwordMatch;
+    async authenticate(userEmail: string, password: string): Promise<boolean> {
+        const user = this.findUser(userEmail)
+        if (!user) throw new Error('User not found.')
+        return await this.crypt.compare(password, user.password)
     }
 
-    listUsers(): User[] {
-        return this.users;
-    }
-
-    listRents(): Rent[] {
-        return this.rents;
-    }
-
-    listBikes(): Bike[] {
-        return this.bikes;
-    }
-
-    registerBike(bike: Bike, availability: boolean = true): string {
-        const newId = crypto.randomUUID();
-        bike.id = newId;
-        bike.available = availability;
-        this.bikes.push(bike);
-        return newId;
+    registerBike(bike: Bike): string {
+        const newId = crypto.randomUUID()
+        bike.id = newId
+		const newLocation = faker.location.streetAddress(false)
+		bike.location = newLocation
+        this.bikes.push(bike)
+        return newId
     }
 
     removeUser(email: string): void {
-        const userIndex = this.users.findIndex(user => user.email === email);
+        const userIndex = this.users.findIndex(user => user.email === email)
         if (userIndex !== -1) {
-            this.users.splice(userIndex, 1);
-            return;
+            this.users.splice(userIndex, 1)
+            return
         }
-        throw new Error('User does not exist.');
+        throw new Error('User does not exist.')
+    }
+    
+    rentBike(bikeId: string, userEmail: string): void {
+        const bike = this.bikes.find(bike => bike.id === bikeId)
+        if (!bike) {
+            throw new Error('Bike not found.')
+        }
+        if (!bike.available) {
+            throw new Error('Unavailable bike.')
+        }
+        const user = this.findUser(userEmail)
+        if (!user) {
+            throw new Error('User not found.')
+        }
+        bike.available = false
+        const newRent = new Rent(bike, user, new Date())
+        this.rents.push(newRent)
     }
 
-    returnBike(bikeId: string, userEmail: string, returnDate: Date): number {
-        const rent = this.rents.find(rent => 
+    returnBike(bikeId: string, userEmail: string): number {
+        const now = new Date()
+        const rent = this.rents.find(rent =>
             rent.bike.id === bikeId &&
             rent.user.email === userEmail &&
-            rent.dateReturned === undefined &&
-            rent.dateFrom <= returnDate
-        );
-        if (rent) {
-            rent.dateReturned = returnDate;
-            const daysRented = Math.ceil((returnDate.getTime() - rent.dateFrom.getTime()) / (1000 * 60 * 60 * 24));
-            const rentalCost = daysRented * rent.bike.dailyRate;
-            return rentalCost;
-        }
-        throw new Error('Rent not found.');
+            !rent.end
+        )
+        if (!rent) throw new Error('Rent not found.')
+        rent.end = now
+        rent.bike.available = true
+        const hours = diffHours(rent.end, rent.start)
+        return hours * rent.bike.rate
     }
+
+    listUsers(): User[] {
+        return this.users.slice()
+    }
+
+    listBikes(): Bike[] {
+        return this.bikes.slice()
+    }
+
+    listRents(): Rent[] {
+        return this.rents.slice()
+    }
+}
+
+function diffHours(dt2: Date, dt1: Date) {
+  var diff = (dt2.getTime() - dt1.getTime()) / 1000;
+  diff /= (60 * 60);
+  return Math.abs(diff);
 }
