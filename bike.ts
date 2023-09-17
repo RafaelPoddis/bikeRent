@@ -1,11 +1,3 @@
-import { Client } from './client';
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-
-const faker = require("@faker-js/faker")
-
-faker.locale = "pt_BR"
-
 export class Bike {
     constructor(
         public name: string,
