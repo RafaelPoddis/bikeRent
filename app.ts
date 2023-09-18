@@ -84,6 +84,8 @@ export class App {
         rent.end = now
         rent.bike.available = true
         const hours = diffHours(rent.end, rent.start)
+	const newLocation = faker.location.streetAddress(false)
+	rent.bike.location = newLocation
         return hours * rent.bike.rate
     }
 
