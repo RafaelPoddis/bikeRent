@@ -10,9 +10,14 @@ async function main() {
     const user1 = new User('Jose', 'jose@mail.com', '1234')
     await app.registerUser(user1)
     const bike = new Bike('caloi mountainbike', 'mountain bike',
-        1234, 1234, 100.0, 'My bike', 5, [], undefined)
+        1234, 1234, 100.0, 'My bike', 5, [])
     app.registerBike(bike)
-	console.log(app.bikes)
+    console.log('Local primário: ', bike.location)
+    app.rentBike(bike.id, user1.email)
+    console.log('Bike disponível: ', bike.available)
+    clock.tick(1000 * 60 * 65)
+    console.log(app.returnBike(bike.id, user1.email))
+    console.log('Local secundário: ', bike.location)
 }
 
 main()
