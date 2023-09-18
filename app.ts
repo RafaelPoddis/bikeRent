@@ -2,11 +2,8 @@ import { Bike } from "./bike";
 import { Crypt } from "./crypt";
 import { Rent } from "./rent";
 import { User } from "./user";
-import { createRequire } from "module";
+import { faker } from '@faker-js/faker';
 import crypto from 'crypto'
-
-const require = createRequire(import.meta.url);
-const faker = require("@faker-js/faker")
 
 export class App {
     users: User[] = []
@@ -83,23 +80,28 @@ export class App {
         if (!rent) throw new Error('Rent not found.')
         rent.end = now
         rent.bike.available = true
+		const newLocation = faker.location.streetAddress(false)
+		rent.bike.location = newLocation
         const hours = diffHours(rent.end, rent.start)
-	const newLocation = faker.location.streetAddress(false)
-	rent.bike.location = newLocation
         return hours * rent.bike.rate
     }
 
     listUsers(): User[] {
-        return this.users.slice()
+        return this.users
     }
 
     listBikes(): Bike[] {
-        return this.bikes.slice()
+        return this.bikes
     }
 
     listRents(): Rent[] {
-        return this.rents.slice()
+        return this.rents
     }
+
+    locationUpdate(bike: Bike): void {
+		const newLocation = faker.location.streetAddress(false)
+		bike.location = newLocation
+	}
 }
 
 function diffHours(dt2: Date, dt1: Date) {
