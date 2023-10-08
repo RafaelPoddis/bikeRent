@@ -14,6 +14,7 @@ import { DuplicateUserError } from "../errors/duplicate-user-error"
 import { UnavailableBikeError } from "../errors/unavailable-bike-error"
 import { UserNotFoundError } from "../errors/user-not-found-error"
 import { RentNotFoundError } from "../errors/rent-not-found-error"
+import { OpenRentError } from "../errors/open-rent-error"
 
 let userRepo: UserRepo
 let bikeRepo: BikeRepo
@@ -138,5 +139,16 @@ describe('App', () => {
         await app.registerBike(bike)
         await expect(app.returnBike(bike.id!, user.email))
             .rejects.toThrow(RentNotFoundError)
+    })
+
+    it ('should throw open rent error when trying to remove a user who has a open rent', async () =>{
+        const app = new App(userRepo, bikeRepo, rentRepo)
+        const user = new User('Jose', 'jose@mail.com', '1234')
+        await app.registerUser(user)
+        const bike = new Bike('caloi mountainbike', 'mountain bike',
+            1234, 1234, 100.0, 'My bike', 5, [])
+        await app.registerBike(bike)
+        await app.rentBike(bike.id!, user.email)
+        await expect(app.removeUser(user.email)).rejects.toThrow(OpenRentError)
     })
 })
