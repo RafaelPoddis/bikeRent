@@ -12,81 +12,177 @@ import { UserRepo } from "./ports/user-repo";
 import { BikeRepo } from "./ports/bike-repo";
 import { RentNotFoundError } from "./errors/rent-not-found-error";
 import { OpenRentError } from "./errors/open-rent-error";
+import { Prisma, PrismaClient } from "@prisma/client";
+
+const { v4: uuidv4 } = require('uuid');
 
 export class App {
     crypt: Crypt = new Crypt()
+    prisma: PrismaClient = new PrismaClient()
 
     constructor(
         readonly userRepo: UserRepo,
         readonly bikeRepo: BikeRepo,
         readonly rentRepo: RentRepo
-    ) {}
+    ) { }
 
-    async findUser(email: string): Promise<User> {
-        const user = await this.userRepo.find(email)
+    async findUser(userEmail: string): Promise<User | null> {
+        const user = await this.prisma.user.findUnique({
+            where: {
+                email: userEmail
+            }
+        })
         if (!user) throw new UserNotFoundError()
         return user
     }
 
-    async registerUser(user: User): Promise<string> {
-        if (await this.userRepo.find(user.email)) {
-          throw new DuplicateUserError()
+    async registerUser(user: User): Promise<User | null> {
+        if (await this.prisma.user.findUnique({
+            where: {
+                email: user.email
+            }
+        })) {
+            throw new DuplicateUserError()
         }
         const encryptedPassword = await this.crypt.encrypt(user.password)
         user.password = encryptedPassword
-        return await this.userRepo.add(user)
+        return await this.prisma.user.create({
+            data: {
+                name: user.name,
+                email: user.email,
+                password: user.password,
+                id: uuidv4()
+            }
+        })
     }
 
     async authenticate(userEmail: string, password: string): Promise<boolean> {
-        const user = await this.findUser(userEmail)
-        return await this.crypt.compare(password, user.password)
+        const user = await this.findUser(userEmail);
+        if (!user) return false;
+        return await this.crypt.compare(password, user.password);
     }
 
-    async registerBike(bike: Bike): Promise<string> {
-        return await this.bikeRepo.add(bike)
+    async registerBike(bike: Bike): Promise<Bike | null> {
+        return await this.prisma.bike.create({
+            data: {
+                id: uuidv4(),
+                name: bike.name,
+                type: bike.type,
+                bodySize: bike.bodySize,
+                maxLoad: bike.maxLoad,
+                rate: bike.rate,
+                ratings: bike.ratings,
+                description: bike.description,
+                available: bike.available,
+                imageUrls: { create: [] },
+                location: {
+                    create: [
+                        {
+                            id: uuidv4(),
+                            latitude: 0.0,
+                            longitude: 0.0
+                        }
+                    ]
+                }
+            }
+        })
     }
 
     async removeUser(email: string): Promise<void> {
-        await this.findUser(email)
-        const openRent = this.rentRepo.findOpenRentsFor(email)
-        if ((await openRent).length > 0){
-            throw new OpenRentError()
-        }else{
-            await this.userRepo.remove(email)   
+        const user = await this.findUser(email);
+        if (!user) throw new UserNotFoundError();
+      
+        const openRent = await this.prisma.rent.findMany({
+          where: { userEmail: user.email, end: null },
+        });
+      
+        if (openRent.length > 0) {
+          throw new OpenRentError();
+        } else {
+          await this.prisma.user.delete({ where: { email: email } });
         }
-    }
-    
-    async rentBike(bikeId: string, userEmail: string): Promise<string> {
-        const bike = await this.findBike(bikeId)
+    }   
+
+    async rentBike(bikeId: string, userEmail: string): Promise<Rent> {
+        const bike = await this.prisma.bike.findUnique({
+          where: { id: bikeId },
+        });
+      
+        if (!bike) throw new BikeNotFoundError();
+      
         if (!bike.available) {
-            throw new UnavailableBikeError()
+          throw new UnavailableBikeError();
         }
-        const user = await this.findUser(userEmail)
-        bike.available = false
-        await this.bikeRepo.update(bikeId, bike)
-        const newRent = new Rent(bike, user, new Date())
-        return await this.rentRepo.add(newRent)
-    }
+      
+        const user = await this.findUser(userEmail);
+      
+        const newRent = await this.prisma.rent.create({
+          data: {
+            id: uuidv4(),
+            start: new Date(),
+            bike: { connect: { id: bikeId } },
+            user: { connect: { id: user!.id } },
+          },
+        });
+      
+        await this.prisma.bike.update({
+          where: { id: bikeId },
+          data: { available: false },
+        });
+      
+        return newRent;
+    }      
 
     async returnBike(bikeId: string, userEmail: string): Promise<number> {
-        const now = new Date()
-        const rent = await this.rentRepo.findOpen(bikeId, userEmail)
-        if (!rent) throw new RentNotFoundError()
-        rent.end = now
-        await this.rentRepo.update(rent.id!, rent)
-        rent.bike.available = true
-        await this.bikeRepo.update(rent.bike.id!, rent.bike)
-        const hours = diffHours(rent.end, rent.start)
-        return hours * rent.bike.rate
-    }
+        const now = new Date();
+        const rent = await this.prisma.rent.findFirst({
+          where: { bikeId: bikeId, userEmail: userEmail, end: null },
+          include: {
+            bike: true
+          }
+        });
+      
+        if (!rent) throw new RentNotFoundError();
+      
+        rent.end = now;
+      
+        await this.prisma.rent.update({
+          where: { id: rent.id },
+          data: { end: now },
+        });
+      
+        await this.prisma.bike.update({
+          where: { id: bikeId },
+          data: { available: true },
+        });
+      
+        const hours = diffHours(rent.end, rent.start);
+        return hours * rent.bike.rate;
+    }      
 
     async listUsers(): Promise<User[]> {
-        return await this.userRepo.list()
-    }
+        return await this.prisma.user.findMany()
+    }      
 
     async listBikes(): Promise<Bike[]> {
-        return await this.bikeRepo.list()
+        const bikesFromPrisma = await this.prisma.bike.findMany();
+        const bikes: Bike[] = bikesFromPrisma.map(prismaBike => {
+            return {
+                id: prismaBike.id,
+                name: prismaBike.name,
+                type: prismaBike.type,
+                bodySize: prismaBike.bodySize,
+                available: prismaBike.available,
+                description: prismaBike.description,
+                maxLoad: prismaBike.maxLoad,
+                ratings: prismaBike.ratings,
+                rate: prismaBike.rate
+            };
+        });
+    
+        return bikes;
     }
+         
 
     async moveBikeTo(bikeId: string, location: Location) {
         const bike = await this.findBike(bikeId)
@@ -96,14 +192,18 @@ export class App {
     }
 
     async findBike(bikeId: string): Promise<Bike> {
-        const bike = await this.bikeRepo.find(bikeId)
+        const bike = await this.prisma.bike.findUnique({
+            where: {
+                id: bikeId
+            }
+        })
         if (!bike) throw new BikeNotFoundError()
         return bike
     }
 }
 
 function diffHours(dt2: Date, dt1: Date) {
-  var diff = (dt2.getTime() - dt1.getTime()) / 1000;
-  diff /= (60 * 60);
-  return Math.abs(diff);
+    var diff = (dt2.getTime() - dt1.getTime()) / 1000;
+    diff /= (60 * 60);
+    return Math.abs(diff);
 }
