@@ -10,7 +10,6 @@ import { DuplicateUserError } from "./errors/duplicate-user-error";
 import { RentRepo } from "./ports/rent-repo";
 import { UserRepo } from "./ports/user-repo";
 import { BikeRepo } from "./ports/bike-repo";
-import { RentNotFoundError } from "./errors/rent-not-found-error";
 import { OpenRentError } from "./errors/open-rent-error";
 
 export class App {
@@ -48,12 +47,10 @@ export class App {
 
     async removeUser(email: string): Promise<void> {
         await this.findUser(email)
-        const openRent = this.rentRepo.findOpenRentsFor(email)
-        if ((await openRent).length > 0){
+        if ((await this.rentRepo.findOpenRentsFor(email)).length > 0) {
             throw new OpenRentError()
-        }else{
-            await this.userRepo.remove(email)   
         }
+        await this.userRepo.remove(email)
     }
     
     async rentBike(bikeId: string, userEmail: string): Promise<string> {
@@ -71,7 +68,7 @@ export class App {
     async returnBike(bikeId: string, userEmail: string): Promise<number> {
         const now = new Date()
         const rent = await this.rentRepo.findOpen(bikeId, userEmail)
-        if (!rent) throw new RentNotFoundError()
+        if (!rent) throw new Error('Rent not found.')
         rent.end = now
         await this.rentRepo.update(rent.id!, rent)
         rent.bike.available = true

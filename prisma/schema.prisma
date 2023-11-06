@@ -1,0 +1,39 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User{
+  id String @id @default(uuid())
+  name String
+  email String @unique
+  password String
+}
+
+model Bike {
+  id String @id @default(uuid())
+  name String
+  type String
+  description String
+  rate Float
+  ratings Float
+  bodySize Float
+  maxLoad Float
+  available Boolean @default(true)
+  imageUrls String[]
+  location Location[]
+}
+
+model Location {
+  latitude Float @unique @default(0.0)
+  longitude Float @unique @default(0.0)
+  bike Bike @relation(fields: [bikeId], references: [id])
+  bikeId String
+}
